@@ -30,6 +30,14 @@ const projectsData = [
     tag: ["All", "Web"],
     gitUrl: "https://github.com/abdubest101010/todolist-web-with-notification",
     previewUrl: "https://t.me/todolistwithNotification_bot",
+  },{
+    id: 4,
+    title: "A social media web app people can interact eachother",
+    description: "a website design for users to interact eachother and they can post their ideas and get response from other and can post day to day stories and so much",
+    image: "/images/projects/Social-Media-Engagement.png",
+    tag: ["All", "Web"],
+    gitUrl: "https://github.com/abdubest101010/social-media",
+    previewUrl: "https://abdu-social-media.vercel.app",
   }
 ];
 
