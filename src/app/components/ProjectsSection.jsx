@@ -26,7 +26,7 @@ const projectsData = [
     id: 3,
     title: "Todolist website integrated with telegram",
     description: "a website design for users to schedule their work and get notified",
-    image: "/images/projects/todo.png",
+    image: "/images/projects/todolist.jpg",
     tag: ["All", "Web"],
     gitUrl: "https://github.com/abdubest101010/todolist-web-with-notification",
     previewUrl: "https://t.me/todolistwithNotification_bot",
