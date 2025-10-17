@@ -9,7 +9,7 @@ const projectsData = [
     id: 1,
     title: "ClinicFlow – Healthcare Management for Ethiopian Clinics",
     description: "ClinicFlow is a modern, all-in-one clinic management platform built for Ethiopian healthcare settings. Designed for receptionists, doctors, and laboratory staff, it digitizes the entire patient journey—from registration and appointment scheduling to vital checks, doctor consultations, lab testing, and finalization.",
-    image: "/images/projects/Clinic-Photo.png",
+    image: "/images/projects/ClinicPhoto.jpg",
     tag: ["All", "Web"],
     gitUrl: "https://github.com/abdubest101010/Electronic-Health-Solution",
     previewUrl: "https://niswa-clinic.vercel.app",
