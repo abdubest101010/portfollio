@@ -12,7 +12,7 @@ const projectsData = [
     image: "/images/projects/Clinic-Photo.png",
     tag: ["All", "Web"],
     gitUrl: "https://github.com/abdubest101010/Electronic-Health-Solution",
-    previewUrl: "https://niswa-clinic.vercel.app/receptionist/register",
+    previewUrl: "https://niswa-clinic.vercel.app",
   },
   {
     id: 2,
