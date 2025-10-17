@@ -38,6 +38,15 @@ const projectsData = [
     tag: ["All", "Web"],
     gitUrl: "https://github.com/abdubest101010/social-media",
     previewUrl: "https://abdu-social-media.vercel.app",
+  },
+  {
+    id: 5,
+    title: "ClinicFlow – Healthcare Management for Ethiopian Clinics",
+    description: "ClinicFlow is a modern, all-in-one clinic management platform built for Ethiopian healthcare settings. Designed for receptionists, doctors, and laboratory staff, it digitizes the entire patient journey—from registration and appointment scheduling to vital checks, doctor consultations, lab testing, and finalization.",
+    image: "/images/projects/Clinic.png",
+    tag: ["All", "Web"],
+    gitUrl: "https://github.com/abdubest101010/Electronic-Health-Solution",
+    previewUrl: "https://abdu-social-media.vercel.app",
   }
 ];
 
