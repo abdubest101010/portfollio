@@ -5,14 +5,14 @@ import ProjectTag from "./ProjectTag";
 import { motion, useInView } from "framer-motion";
 
 const projectsData = [
-  {
+   {
     id: 1,
-    title: "Amazon clone",
-    description: "Amazon website specially login and cart page",
-    image: "/images/projects/images.jfif",
+    title: "ClinicFlow – Healthcare Management for Ethiopian Clinics",
+    description: "ClinicFlow is a modern, all-in-one clinic management platform built for Ethiopian healthcare settings. Designed for receptionists, doctors, and laboratory staff, it digitizes the entire patient journey—from registration and appointment scheduling to vital checks, doctor consultations, lab testing, and finalization.",
+    image: "/images/projects/Clinic-Photo.png",
     tag: ["All", "Web"],
-    gitUrl: "https://github.com/abdubest101010/Abdu_Amazon_Clone_project",
-    previewUrl: "https://abdu-projects-amazon-clone.netlify.app/",
+    gitUrl: "https://github.com/abdubest101010/Electronic-Health-Solution",
+    previewUrl: "https://niswa-clinic.vercel.app/receptionist/register",
   },
   {
     id: 2,
@@ -22,15 +22,17 @@ const projectsData = [
     tag: ["All", "Web"],
     gitUrl: "https://github.com/abdubest101010/EvangadiForumProject",
     previewUrl: "https://abdu-evangai-forum-project.vercel.app/",
-  },{
+  },
+  {
     id: 3,
-    title: "Todolist website integrated with telegram",
-    description: "a website design for users to schedule their work and get notified",
-    image: "/images/projects/todolist.jpg",
+    title: "Amazon clone",
+    description: "Amazon website specially login and cart page",
+    image: "/images/projects/images.jfif",
     tag: ["All", "Web"],
-    gitUrl: "https://github.com/abdubest101010/todolist-web-with-notification",
-    previewUrl: "https://t.me/todolistwithNotification_bot",
-  },{
+    gitUrl: "https://github.com/abdubest101010/Abdu_Amazon_Clone_project",
+    previewUrl: "https://abdu-projects-amazon-clone.netlify.app/",
+  },
+  {
     id: 4,
     title: "A social media web app people can interact eachother",
     description: "a website design for users to interact eachother and they can post their ideas and get response from other and can post day to day stories and so much",
@@ -39,15 +41,15 @@ const projectsData = [
     gitUrl: "https://github.com/abdubest101010/social-media",
     previewUrl: "https://abdu-social-media.vercel.app",
   },
-  {
+{
     id: 5,
-    title: "ClinicFlow – Healthcare Management for Ethiopian Clinics",
-    description: "ClinicFlow is a modern, all-in-one clinic management platform built for Ethiopian healthcare settings. Designed for receptionists, doctors, and laboratory staff, it digitizes the entire patient journey—from registration and appointment scheduling to vital checks, doctor consultations, lab testing, and finalization.",
-    image: "/images/projects/Clinic.png",
+    title: "Todolist website integrated with telegram",
+    description: "a website design for users to schedule their work and get notified",
+    image: "/images/projects/todolist.jpg",
     tag: ["All", "Web"],
-    gitUrl: "https://github.com/abdubest101010/Electronic-Health-Solution",
-    previewUrl: "https://abdu-social-media.vercel.app",
-  }
+    gitUrl: "https://github.com/abdubest101010/todolist-web-with-notification",
+    previewUrl: "https://t.me/todolistwithNotification_bot",
+  } 
 ];
 
 const ProjectsSection = () => {
