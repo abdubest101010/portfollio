@@ -28,7 +28,7 @@ const TAB_DATA = [
        <Link href="https://www.udacity.com/certificate/e/53e9840e-4a54-11ef-ae6a-ff7164e22d81" target="_blank" rel="noopener noreferrer">
   Programming Fundamental
 </Link>
-
+<p>Evangadi MERN Stack Development</p>
 
       </ul>
     ),
