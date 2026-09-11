@@ -25,3 +25,36 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+/* DOCX Document Viewer Styling */
+.docx-wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.docx-wrapper > section.docx {
+  background: white !important;
+  color: black !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+  margin-bottom: 20px !important;
+  border-radius: 4px !important;
+}
+
+.docx-html-view table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.docx-html-view table, 
+.docx-html-view th, 
+.docx-html-view td {
+  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+}
+
+.docx-html-view p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
