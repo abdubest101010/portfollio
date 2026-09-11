@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import JSZip from "jszip";
 import mammoth from "mammoth";
 
 export default function TranscriptDocxViewer({ id, docxUrl }) {
@@ -8,7 +9,7 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [htmlContent, setHtmlContent] = useState(null);
-  const [zoom, setZoom] = useState(100);
+  const [barcodeImage, setBarcodeImage] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -17,6 +18,7 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
       try {
         setLoading(true);
         setError(null);
+        setBarcodeImage(null);
 
         const fileUrl = docxUrl || `/api/transcript/${id}/download`;
         const response = await fetch(fileUrl);
@@ -26,7 +28,38 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
 
         const arrayBuffer = await response.arrayBuffer();
 
-        // Attempt 1: Render with docx-preview using native document page dimensions
+        // Extract media images (specifically barcode image like image1.png) via JSZip
+        try {
+          const zip = await JSZip.loadAsync(arrayBuffer.slice(0));
+          const mediaFiles = [];
+          zip.folder("word/media")?.forEach((relativePath, file) => {
+            mediaFiles.push({ path: `word/media/${relativePath}`, file });
+          });
+
+          // Search for image1.png or any non-QR barcode image
+          let barcodeFile = zip.file("word/media/image1.png");
+          if (!barcodeFile) {
+            for (const item of mediaFiles) {
+              if (item.path !== "word/media/image2.png" && (item.path.endsWith(".png") || item.path.endsWith(".jpeg") || item.path.endsWith(".jpg"))) {
+                barcodeFile = item.file;
+                break;
+              }
+            }
+          }
+
+          if (barcodeFile) {
+            const base64Data = await barcodeFile.async("base64");
+            const ext = barcodeFile.name.endsWith(".jpg") || barcodeFile.name.endsWith(".jpeg") ? "jpeg" : "png";
+            const dataUrl = `data:image/${ext};base64,${base64Data}`;
+            if (isMounted) {
+              setBarcodeImage(dataUrl);
+            }
+          }
+        } catch (zipErr) {
+          console.warn("Could not inspect zip media for barcode:", zipErr);
+        }
+
+        // Render DOCX with all header/footer and experimental options enabled
         try {
           const docx = await import("docx-preview");
           if (containerRef.current && isMounted) {
@@ -34,14 +67,29 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
             await docx.renderAsync(arrayBuffer, containerRef.current, null, {
               className: "docx-rendered-document",
               inWrapper: true,
-              ignoreWidth: false, // Preserves native page layout & exact QR positioning
+              ignoreWidth: false,
               ignoreHeight: false,
               ignoreFonts: false,
               breakPages: true,
               useBase64URL: true,
+              renderHeaders: true,
+              renderFooters: true,
+              renderFootnotes: true,
+              renderEndnotes: true,
+              renderAltChunks: true,
               renderChanges: false,
               experimental: true,
             });
+
+            // Ensure images inside rendered document have clean display
+            if (containerRef.current) {
+              const imgs = containerRef.current.querySelectorAll("img");
+              imgs.forEach((img) => {
+                img.style.maxWidth = "100%";
+                img.style.display = "inline-block";
+              });
+            }
+
             if (isMounted) setLoading(false);
             return;
           }
@@ -49,7 +97,7 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
           console.warn("docx-preview failed, attempting mammoth fallback:", docxErr);
         }
 
-        // Attempt 2: Mammoth HTML conversion fallback
+        // Fallback: Mammoth
         const result = await mammoth.convertToHtml({ arrayBuffer });
         if (isMounted) {
           setHtmlContent(result.value);
@@ -73,33 +121,6 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
 
   return (
     <div className="w-full flex flex-col items-center min-h-screen bg-[#121212] py-2 sm:py-6">
-      {/* Floating Toolbar for comfortable viewing & zoom */}
-      {!loading && !error && (
-        <div className="sticky top-2 z-20 mb-4 px-4 py-1.5 bg-[#1e1e1e]/90 backdrop-blur-md border border-[#33353F] rounded-full shadow-lg flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-300">
-          <button
-            onClick={() => setZoom((prev) => Math.max(prev - 10, 50))}
-            className="w-7 h-7 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center font-bold text-white transition"
-            title="Zoom Out"
-          >
-            -
-          </button>
-          <span className="font-mono text-xs w-12 text-center">{zoom}%</span>
-          <button
-            onClick={() => setZoom((prev) => Math.min(prev + 10, 150))}
-            className="w-7 h-7 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center font-bold text-white transition"
-            title="Zoom In"
-          >
-            +
-          </button>
-          <button
-            onClick={() => setZoom(100)}
-            className="px-2.5 py-1 rounded-full bg-gray-800 hover:bg-gray-700 text-xs text-gray-300 transition ml-1"
-          >
-            Reset
-          </button>
-        </div>
-      )}
-
       {loading && (
         <div className="flex flex-col items-center justify-center p-16 text-gray-400 gap-3">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500"></div>
@@ -114,18 +135,28 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
         </div>
       )}
 
-      {/* Main Document Viewport with Left-to-Right Horizontal Scrolling Support */}
+      {/* Main Document Viewport */}
       <div className="w-full overflow-x-auto docx-scroll-wrapper pb-10 flex flex-col items-start sm:items-center">
         <div
           style={{
-            transform: zoom !== 100 ? `scale(${zoom / 100})` : "none",
-            transformOrigin: "top left",
             minWidth: "fit-content",
             margin: "0 auto",
-            transition: "transform 0.15s ease-out",
+            position: "relative",
           }}
           className="px-2 sm:px-4"
         >
+          {/* Top Left Barcode Overlay if extracted from word/media */}
+          {barcodeImage && !loading && (
+            <div className="absolute top-5 left-7 sm:left-9 z-10 pointer-events-auto">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={barcodeImage}
+                alt="Barcode"
+                className="h-10 sm:h-12 w-auto object-contain max-w-[200px]"
+              />
+            </div>
+          )}
+
           {/* Main docx-preview container */}
           <div
             ref={containerRef}
@@ -133,12 +164,13 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
             style={{
               display: htmlContent ? "none" : "block",
               minWidth: "fit-content",
+              position: "relative",
             }}
           />
 
           {/* Fallback HTML container if docx-preview fell back to mammoth */}
           {htmlContent && !loading && (
-            <div className="p-6 sm:p-14 bg-white text-black shadow-2xl rounded-sm overflow-x-auto docx-html-view min-w-[700px]">
+            <div className="p-6 sm:p-14 bg-white text-black shadow-2xl rounded-sm overflow-x-auto docx-html-view min-w-[700px] relative">
               <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
             </div>
           )}
