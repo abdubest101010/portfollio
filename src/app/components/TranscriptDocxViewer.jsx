@@ -26,15 +26,15 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
 
         const arrayBuffer = await response.arrayBuffer();
 
-        // Attempt 1: Render with docx-preview
+        // Attempt 1: Render with docx-preview using native document page dimensions
         try {
           const docx = await import("docx-preview");
           if (containerRef.current && isMounted) {
             containerRef.current.innerHTML = "";
             await docx.renderAsync(arrayBuffer, containerRef.current, null, {
               className: "docx-rendered-document",
-              inWrapper: false,
-              ignoreWidth: true, // Allows responsive width without right-side clipping
+              inWrapper: true,
+              ignoreWidth: false, // Preserves native page layout & exact QR positioning
               ignoreHeight: false,
               ignoreFonts: false,
               breakPages: true,
@@ -72,12 +72,12 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
   }, [id, docxUrl]);
 
   return (
-    <div className="w-full flex flex-col items-center min-h-screen bg-[#121212] py-2 sm:py-6 px-1 sm:px-4">
-      {/* Floating Toolbar for comfortable viewing / zoom on mobile & desktop */}
+    <div className="w-full flex flex-col items-center min-h-screen bg-[#121212] py-2 sm:py-6">
+      {/* Floating Toolbar for comfortable viewing & zoom */}
       {!loading && !error && (
-        <div className="sticky top-2 z-20 mb-4 px-4 py-2 bg-[#1e1e1e]/90 backdrop-blur-md border border-[#33353F] rounded-full shadow-lg flex items-center gap-3 text-xs sm:text-sm text-gray-300">
+        <div className="sticky top-2 z-20 mb-4 px-4 py-1.5 bg-[#1e1e1e]/90 backdrop-blur-md border border-[#33353F] rounded-full shadow-lg flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-300">
           <button
-            onClick={() => setZoom((prev) => Math.max(prev - 10, 60))}
+            onClick={() => setZoom((prev) => Math.max(prev - 10, 50))}
             className="w-7 h-7 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center font-bold text-white transition"
             title="Zoom Out"
           >
@@ -103,7 +103,7 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
       {loading && (
         <div className="flex flex-col items-center justify-center p-16 text-gray-400 gap-3">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500"></div>
-          <p className="text-sm">Loading transcript document...</p>
+          <p className="text-sm">Rendering transcript document...</p>
         </div>
       )}
 
@@ -114,28 +114,31 @@ export default function TranscriptDocxViewer({ id, docxUrl }) {
         </div>
       )}
 
-      {/* Main Document Viewport with responsive horizontal scrolling & scaling */}
-      <div className="w-full flex justify-center overflow-x-auto pb-8">
+      {/* Main Document Viewport with Left-to-Right Horizontal Scrolling Support */}
+      <div className="w-full overflow-x-auto docx-scroll-wrapper pb-10 flex flex-col items-start sm:items-center">
         <div
           style={{
             transform: zoom !== 100 ? `scale(${zoom / 100})` : "none",
-            transformOrigin: "top center",
+            transformOrigin: "top left",
+            minWidth: "fit-content",
+            margin: "0 auto",
             transition: "transform 0.15s ease-out",
           }}
-          className="w-full max-w-4xl transition-all"
+          className="px-2 sm:px-4"
         >
           {/* Main docx-preview container */}
           <div
             ref={containerRef}
-            className="w-full bg-white text-black shadow-2xl rounded-sm docx-custom-container"
+            className="bg-white text-black shadow-2xl rounded-sm docx-custom-container"
             style={{
               display: htmlContent ? "none" : "block",
+              minWidth: "fit-content",
             }}
           />
 
           {/* Fallback HTML container if docx-preview fell back to mammoth */}
           {htmlContent && !loading && (
-            <div className="w-full p-4 sm:p-12 bg-white text-black shadow-2xl rounded-sm overflow-x-auto docx-html-view">
+            <div className="p-6 sm:p-14 bg-white text-black shadow-2xl rounded-sm overflow-x-auto docx-html-view min-w-[700px]">
               <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
             </div>
           )}

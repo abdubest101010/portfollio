@@ -27,49 +27,36 @@ body {
 }
 
 /* DOCX Document Viewer Styling */
-.docx-custom-container {
+.docx-scroll-wrapper {
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 .docx-custom-container .docx-wrapper,
 .docx-wrapper {
   background: transparent !important;
   padding: 0 !important;
-  width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: center !important;
+  align-items: flex-start !important;
+}
+
+@media (min-width: 900px) {
+  .docx-custom-container .docx-wrapper,
+  .docx-wrapper {
+    align-items: center !important;
+  }
 }
 
 .docx-wrapper > section.docx,
 section.docx {
   background: white !important;
   color: black !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
-  margin-bottom: 20px !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6) !important;
+  margin-bottom: 24px !important;
   border-radius: 4px !important;
   box-sizing: border-box !important;
-  max-width: 100% !important;
-}
-
-/* Ensure inner tables, images, and paragraphs don't overflow */
-section.docx table,
-.docx-custom-container table {
-  max-width: 100% !important;
-  border-collapse: collapse !important;
-  margin: 0.5rem auto !important;
-}
-
-section.docx img,
-.docx-custom-container img {
-  max-width: 100% !important;
-  height: auto !important;
-}
-
-section.docx p,
-.docx-custom-container p {
-  word-break: break-word !important;
 }
 
 .docx-html-view table {
@@ -88,14 +75,5 @@ section.docx p,
 .docx-html-view p {
   margin-bottom: 0.75rem;
   line-height: 1.6;
-}
-
-@media (max-width: 768px) {
-  section.docx,
-  .docx-wrapper > section.docx {
-    padding: 16px 12px !important;
-    width: 100% !important;
-    min-width: 0 !important;
-  }
 }
 
