@@ -25,24 +25,33 @@ async function getTranscriptData(id) {
       prefix: `transcripts/${id}/`,
     });
 
+    let metadata = {};
     const metaBlob = blobs.find((b) => b.pathname.endsWith("metadata.json"));
     if (metaBlob) {
-      const res = await fetch(metaBlob.url, { cache: "no-store" });
-      if (res.ok) {
-        const metadata = await res.json();
-        return {
-          ...metadata,
-          verified: true,
-          blobs,
-          storageMode: "blob",
-        };
-      }
+      try {
+        const res = await fetch(metaBlob.url, { cache: "no-store" });
+        if (res.ok) {
+          metadata = await res.json();
+        }
+      } catch (e) {}
     }
+
+    const modifiedBlob =
+      blobs.find((b) => b.pathname.includes("/modified-") && b.pathname.endsWith(".docx")) ||
+      blobs.find((b) => b.pathname.endsWith(".docx"));
+
+    const originalBlob = blobs.find(
+      (b) => b.pathname.includes("/original-") && b.pathname.endsWith(".docx")
+    );
 
     return {
       id,
       verified: true,
-      blobs,
+      originalFilename: metadata.originalFilename || "transcript.docx",
+      originalQrData: metadata.originalQrData || null,
+      processedAt: metadata.processedAt || new Date().toISOString(),
+      modifiedBlobUrl: metadata.modifiedBlobUrl || modifiedBlob?.downloadUrl || modifiedBlob?.url,
+      originalBlobUrl: metadata.originalBlobUrl || originalBlob?.downloadUrl || originalBlob?.url,
       storageMode: "blob",
     };
   } catch (err) {
@@ -70,7 +79,7 @@ export default async function TranscriptVerificationPage({ params }) {
             ABDU PORTFOLIO
           </Link>
           <p className="text-xs sm:text-sm text-gray-400 mt-1 uppercase tracking-widest">
-            Document Verification System
+            Official Document Verification System
           </p>
         </div>
 
@@ -107,6 +116,27 @@ export default async function TranscriptVerificationPage({ params }) {
             </div>
           </div>
 
+          {/* Prominent File Download Banner if available */}
+          {data?.modifiedBlobUrl && (
+            <div className="mb-6 p-4 rounded-xl bg-purple-950/40 border border-purple-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-xs text-purple-300 font-semibold uppercase tracking-wider">
+                  Associated Document Available
+                </p>
+                <p className="text-sm text-white font-medium truncate max-w-sm mt-0.5">
+                  {data.originalFilename ? `modified-${data.originalFilename}` : "Verified Transcript.docx"}
+                </p>
+              </div>
+              <a
+                href={data.modifiedBlobUrl}
+                download
+                className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-primary-500 to-secondary-500 hover:opacity-90 font-semibold text-white text-sm text-center shadow-lg transition"
+              >
+                📥 Download Document
+              </a>
+            </div>
+          )}
+
           {/* Details Grid */}
           <div className="space-y-4 text-sm">
             <div className="bg-[#121212] p-4 rounded-xl border border-[#262837] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -137,7 +167,7 @@ export default async function TranscriptVerificationPage({ params }) {
             {data?.originalQrData && data.originalQrData !== "N/A" && (
               <div className="bg-[#121212] p-4 rounded-xl border border-[#262837]">
                 <span className="text-gray-400 block mb-1">
-                  Original QR Target URL:
+                  Original School QR Target URL:
                 </span>
                 <a
                   href={data.originalQrData}
@@ -161,17 +191,14 @@ export default async function TranscriptVerificationPage({ params }) {
               >
                 Download Verified DOCX
               </a>
-            ) : null}
-
-            {data?.originalBlobUrl ? (
+            ) : (
               <a
-                href={data.originalBlobUrl}
-                download
-                className="flex-1 text-center px-6 py-3 rounded-xl bg-[#222430] hover:bg-[#2b2e3d] text-gray-200 border border-[#3b3e4f] font-medium transition"
+                href={`/api/transcript/${id}/download`}
+                className="flex-1 text-center px-6 py-3 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 hover:opacity-90 font-semibold text-white transition shadow-lg shadow-purple-500/20"
               >
-                Download Original DOCX
+                Download Verified DOCX
               </a>
-            ) : null}
+            )}
 
             <Link
               href="/tools/transcript"

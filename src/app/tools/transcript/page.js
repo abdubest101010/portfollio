@@ -139,16 +139,6 @@ export default function TranscriptToolPage() {
 
       setResult(resultObj);
       saveToHistory(resultObj);
-
-      // Trigger download automatically
-      if (downloadUrl) {
-        const a = document.createElement("a");
-        a.href = downloadUrl;
-        a.download = resultObj.filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
     } catch (err) {
       console.error(err);
       setError(err.message || "An unexpected error occurred while processing the file.");

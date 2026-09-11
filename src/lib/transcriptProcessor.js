@@ -50,9 +50,11 @@ async function generateQrCodePng(url, width = 300) {
  */
 export async function processTranscriptDocx(fileBuffer, originalFilename = "transcript.docx") {
   const id = generateNanoid();
+  // Always use the official production domain so QR codes open directly without requiring Vercel login
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://abdu-portfollio.vercel.app");
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://abdu-portfollio.vercel.app";
 
   const newQrUrl = `${baseUrl.replace(/\/$/, "")}/t/${id}`;
 
