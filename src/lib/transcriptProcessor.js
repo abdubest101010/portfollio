@@ -147,13 +147,18 @@ export async function processTranscriptDocx(
         zip.file(relsPath, relsXml);
       }
 
-      // Insert photo drawing XML with full namespaces inside photo box in word/document.xml
+      // Insert photo drawing XML inside photo box in word/document.xml
       const docPath = "word/document.xml";
       let docXml = (await zip.file(docPath)?.async("text")) || "";
       if (docXml) {
-        const photoDrawingXml = `<w:p w:rsidR="003576BC" w:rsidRDefault="00F428F1"><w:pPr><w:jc w:val="center"/><w:spacing w:after="40" w:before="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="1069354" cy="1283225"/><wp:docPr id="99" name="Student Photo"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="99" name="student_photo.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rIdPhoto" cstate="print"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1069354" cy="1283225"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+        // Ensure root <w:document> includes wp, pic, a, and r namespaces if missing
+        if (!docXml.includes('xmlns:wp=')) {
+          docXml = docXml.replace('<w:document ', '<w:document xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ');
+        }
 
-        // Insert before "Note: The photo is" paragraph
+        const photoDrawingXml = `<w:p w:rsidR="003576BC" w:rsidRDefault="00F428F1"><w:pPr><w:jc w:val="center"/><w:spacing w:after="40" w:before="0"/></w:pPr><w:r><w:rPr><w:noProof/></w:rPr><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="1069354" cy="1283225"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="99" name="Student Photo"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="99" name="student_photo.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rIdPhoto" cstate="print"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1069354" cy="1283225"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+
+        // Insert before "Note: The photo is" or inside the right-hand cell
         const noteIdx = docXml.indexOf("Note: The photo is");
         if (noteIdx !== -1) {
           const pStart = docXml.lastIndexOf("<w:p", noteIdx);
