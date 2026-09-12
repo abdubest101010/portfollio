@@ -64,12 +64,21 @@ export default function GibsonTranscriptRenderer({ data }) {
           </h2>
         </div>
 
-        {/* Right: Photo Placeholder Box */}
+        {/* Right: Photo Placeholder Box or Uploaded Student Photo */}
         <div className="col-span-3 flex flex-col items-center justify-center text-center">
-          <div className="w-[100px] h-[120px] border border-black bg-gray-50 flex items-center justify-center mb-1">
-            <span className="text-gray-300 text-xs">Photo</span>
-          </div>
-          <p className="text-[9px] text-gray-700 leading-tight max-w-[120px]">
+          {data.photoDataUrl || data.photoBlobUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={data.photoDataUrl || data.photoBlobUrl}
+              alt="Student Photo"
+              className="w-[105px] h-[125px] object-cover border border-black block mb-1 shadow-sm"
+            />
+          ) : (
+            <div className="w-[105px] h-[125px] border border-black bg-white flex items-center justify-center mb-1">
+              <span className="text-gray-300 text-xs">Photo</span>
+            </div>
+          )}
+          <p className="text-[9px] text-gray-700 leading-tight max-w-[125px]">
             Note: The photo is an actual photo, not a scanned photo.
           </p>
         </div>

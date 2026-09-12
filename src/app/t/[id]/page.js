@@ -10,9 +10,9 @@ export async function generateMetadata({ params }) {
   };
 }
 
-async function getTranscriptBlobUrl(id) {
+async function getTranscriptBlobData(id) {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return null;
+    return { docxUrl: null, photoBlobUrl: null };
   }
 
   try {
@@ -24,19 +24,25 @@ async function getTranscriptBlobUrl(id) {
       blobs.find((b) => b.pathname.includes("/modified-") && b.pathname.endsWith(".docx")) ||
       blobs.find((b) => b.pathname.endsWith(".docx"));
 
-    return modifiedBlob?.downloadUrl || modifiedBlob?.url || null;
+    const photoBlob =
+      blobs.find((b) => b.pathname.includes("/photo.") || b.pathname.includes("photo.jpg") || b.pathname.includes("photo.png"));
+
+    return {
+      docxUrl: modifiedBlob?.downloadUrl || modifiedBlob?.url || null,
+      photoBlobUrl: photoBlob?.downloadUrl || photoBlob?.url || null,
+    };
   } catch (err) {
-    return null;
+    return { docxUrl: null, photoBlobUrl: null };
   }
 }
 
 export default async function TranscriptPage({ params }) {
   const { id } = params;
-  const docxUrl = await getTranscriptBlobUrl(id);
+  const { docxUrl, photoBlobUrl } = await getTranscriptBlobData(id);
 
   return (
-    <main className="min-h-screen bg-[#121212] flex flex-col items-center justify-start p-2 sm:p-6">
-      <TranscriptDocxViewer id={id} docxUrl={docxUrl} />
+    <main className="min-h-screen bg-white text-black flex flex-col items-center justify-start p-2 sm:p-6 animate-unveil">
+      <TranscriptDocxViewer id={id} docxUrl={docxUrl} photoBlobUrl={photoBlobUrl} />
     </main>
   );
 }

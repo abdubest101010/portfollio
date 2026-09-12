@@ -9,6 +9,7 @@ export async function parseDocxTranscript(arrayBuffer) {
   // Extract images
   let qrCodeDataUrl = null;
   let bannerDataUrl = null;
+  let photoDataUrl = null;
 
   const qrFile = zip.file("word/media/image2.png");
   if (qrFile) {
@@ -21,6 +22,17 @@ export async function parseDocxTranscript(arrayBuffer) {
     const b64 = await bannerFile.async("base64");
     const mime = bannerFile.name.endsWith(".png") ? "image/png" : "image/jpeg";
     bannerDataUrl = `data:${mime};base64,${b64}`;
+  }
+
+  const photoFile =
+    zip.file("word/media/image_photo.jpg") ||
+    zip.file("word/media/image_photo.png") ||
+    zip.file("word/media/image3.jpg") ||
+    zip.file("word/media/image3.png");
+  if (photoFile) {
+    const b64 = await photoFile.async("base64");
+    const mime = photoFile.name.endsWith(".png") ? "image/png" : "image/jpeg";
+    photoDataUrl = `data:${mime};base64,${b64}`;
   }
 
   // Parse document XML
@@ -139,6 +151,7 @@ export async function parseDocxTranscript(arrayBuffer) {
   return {
     qrCodeDataUrl,
     bannerDataUrl,
+    photoDataUrl,
     studentName,
     studentShortName,
     age,

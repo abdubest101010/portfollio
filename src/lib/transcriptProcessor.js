@@ -2,6 +2,7 @@ import JSZip from "jszip";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { PNG } from "pngjs";
+import sharp from "sharp";
 import { put } from "@vercel/blob";
 import { customAlphabet } from "nanoid";
 
@@ -13,7 +14,6 @@ const generateNanoid = customAlphabet(
 
 /**
  * Attempts to decode a QR code from a PNG buffer.
- * Returns the decoded string if found, otherwise null.
  */
 function decodeQrFromPng(pngBuffer) {
   try {
@@ -42,15 +42,18 @@ async function generateQrCodePng(url, width = 300) {
 }
 
 /**
- * Processes a DOCX buffer:
- * 1. Finds existing QR (checking word/media/image2.png first, then scanning word/media/*)
- * 2. Reads the original QR value if readable
- * 3. Replaces that image in the DOCX zip with a newly generated QR pointing to `https://abdu-portfollio.vercel.app/t/{id}`
- * 4. Optionally stores to Vercel Blob if token is configured
+ * Processes a DOCX buffer and optional student photo:
+ * 1. Replaces the QR code pointing to https://abdu-portfollio.vercel.app/t/{id}
+ * 2. If photo is provided, center-crops/resizes it and places it in the photo box
+ * 3. Saves documents, photo, and metadata to Vercel Blob
  */
-export async function processTranscriptDocx(fileBuffer, originalFilename = "transcript.docx") {
+export async function processTranscriptDocx(
+  fileBuffer,
+  originalFilename = "transcript.docx",
+  photoBuffer = null,
+  photoFilename = "photo.jpg"
+) {
   const id = generateNanoid();
-  // Always use the official production domain so QR codes open directly without requiring Vercel login
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL ||
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -69,7 +72,7 @@ export async function processTranscriptDocx(fileBuffer, originalFilename = "tran
     mediaFiles.push({ path: `word/media/${relativePath}`, file });
   });
 
-  // Step 1: Check word/media/image2.png first as specified
+  // Check word/media/image2.png first
   const image2 = zip.file("word/media/image2.png");
   if (image2) {
     const imgBuf = await image2.async("nodebuffer");
@@ -80,7 +83,7 @@ export async function processTranscriptDocx(fileBuffer, originalFilename = "tran
     targetImagePath = "word/media/image2.png";
   }
 
-  // Step 2: If image2.png wasn't a QR or didn't exist, scan all media images with jsQR
+  // If not found, scan other media images
   if (!targetImagePath || !originalQrData) {
     for (const item of mediaFiles) {
       if (
@@ -96,29 +99,96 @@ export async function processTranscriptDocx(fileBuffer, originalFilename = "tran
             targetImagePath = item.path;
             break;
           }
-        } catch (e) {
-          // ignore scan error and continue
-        }
+        } catch (e) {}
       }
     }
   }
 
-  // Default fallback if no QR identified: use word/media/image2.png or the first image
   if (!targetImagePath) {
-    if (image2) {
-      targetImagePath = "word/media/image2.png";
-    } else if (mediaFiles.length > 0) {
-      targetImagePath = mediaFiles[0].path;
-    } else {
-      targetImagePath = "word/media/image2.png";
-    }
+    targetImagePath = image2 ? "word/media/image2.png" : "word/media/image2.png";
   }
 
-  // Generate new replacement QR
+  // Generate and replace QR
   const newQrBuffer = await generateQrCodePng(newQrUrl, 260);
-
-  // Replace the image inside the zip
   zip.file(targetImagePath, newQrBuffer);
+
+  // Process optional Student Photo
+  let processedPhotoBuffer = null;
+  let photoBlobUrl = null;
+
+  if (photoBuffer && photoBuffer.length > 0) {
+    try {
+      // Resize & center-crop photo to exact portrait dimensions (300x360 px, 5:6 aspect ratio)
+      processedPhotoBuffer = await sharp(photoBuffer)
+        .resize(300, 360, {
+          fit: "cover",
+          position: "center",
+        })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+
+      // Place image inside zip
+      zip.file("word/media/image_photo.jpg", processedPhotoBuffer);
+
+      // Add relationship to word/_rels/document.xml.rels
+      const relsPath = "word/_rels/document.xml.rels";
+      let relsXml = (await zip.file(relsPath)?.async("text")) || "";
+      if (relsXml && !relsXml.includes("image_photo.jpg")) {
+        const photoRel = `<Relationship Id="rIdPhoto" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image_photo.jpg"/>`;
+        relsXml = relsXml.replace("</Relationships>", `${photoRel}</Relationships>`);
+        zip.file(relsPath, relsXml);
+      }
+
+      // Insert photo drawing XML inside photo box in word/document.xml
+      const docPath = "word/document.xml";
+      let docXml = (await zip.file(docPath)?.async("text")) || "";
+      if (docXml) {
+        const photoDrawingXml = `
+          <w:p w:rsidR="003576BC" w:rsidRDefault="00F428F1">
+            <w:pPr><w:jc w:val="center"/><w:spacing w:after="60"/></w:pPr>
+            <w:r>
+              <w:drawing>
+                <wp:inline distT="0" distB="0" distL="0" distR="0">
+                  <wp:extent cx="1069354" cy="1283225"/>
+                  <wp:docPr id="15" name="Student Photo"/>
+                  <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                    <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                      <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                        <pic:nvPicPr>
+                          <pic:cNvPr id="15" name="student_photo.jpg"/>
+                          <pic:cNvPicPr/>
+                        </pic:nvPicPr>
+                        <pic:blipFill>
+                          <a:blip r:embed="rIdPhoto" cstate="print"/>
+                          <a:stretch><a:fillRect/></a:stretch>
+                        </pic:blipFill>
+                        <pic:spPr>
+                          <a:xfrm><a:off x="0" y="0"/><a:ext cx="1069354" cy="1283225"/></a:xfrm>
+                          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                        </pic:spPr>
+                      </pic:pic>
+                    </a:graphicData>
+                  </a:graphic>
+                </wp:inline>
+              </w:drawing>
+            </w:r>
+          </w:p>
+        `;
+
+        // Insert before "Note: The photo is" paragraph
+        const noteIdx = docXml.indexOf("Note: The photo is");
+        if (noteIdx !== -1) {
+          const pStart = docXml.lastIndexOf("<w:p", noteIdx);
+          if (pStart !== -1) {
+            docXml = docXml.slice(0, pStart) + photoDrawingXml + docXml.slice(pStart);
+            zip.file(docPath, docXml);
+          }
+        }
+      }
+    } catch (photoErr) {
+      console.warn("Could not process photo for DOCX:", photoErr.message);
+    }
+  }
 
   // Generate modified DOCX buffer
   const modifiedDocxBuffer = await zip.generateAsync({
@@ -127,7 +197,7 @@ export async function processTranscriptDocx(fileBuffer, originalFilename = "tran
     compressionOptions: { level: 9 },
   });
 
-  // Store to Vercel Blob if BLOB_READ_WRITE_TOKEN is available
+  // Upload to Vercel Blob
   let originalBlobUrl = null;
   let modifiedBlobUrl = null;
   let metadataBlobUrl = null;
@@ -139,6 +209,7 @@ export async function processTranscriptDocx(fileBuffer, originalFilename = "tran
     newQrUrl,
     processedAt: new Date().toISOString(),
     targetImageReplaced: targetImagePath,
+    hasPhoto: !!processedPhotoBuffer,
   };
 
   if (process.env.BLOB_READ_WRITE_TOKEN) {
@@ -154,6 +225,15 @@ export async function processTranscriptDocx(fileBuffer, originalFilename = "tran
         contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
       modifiedBlobUrl = modBlob.url;
+
+      if (processedPhotoBuffer) {
+        const photoBlob = await put(`transcripts/${id}/photo.jpg`, processedPhotoBuffer, {
+          access: "public",
+          contentType: "image/jpeg",
+        });
+        photoBlobUrl = photoBlob.url;
+        metadata.photoBlobUrl = photoBlobUrl;
+      }
 
       metadata.originalBlobUrl = originalBlobUrl;
       metadata.modifiedBlobUrl = modifiedBlobUrl;
@@ -174,11 +254,14 @@ export async function processTranscriptDocx(fileBuffer, originalFilename = "tran
     originalQrData,
     targetImagePath,
     modifiedDocxBuffer,
+    photoBuffer: processedPhotoBuffer,
+    photoBlobUrl,
     metadata: {
       ...metadata,
       originalBlobUrl,
       modifiedBlobUrl,
       metadataBlobUrl,
+      photoBlobUrl,
     },
   };
 }

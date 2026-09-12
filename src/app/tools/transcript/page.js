@@ -7,6 +7,8 @@ import Footer from "../../components/Footer";
 
 export default function TranscriptToolPage() {
   const [file, setFile] = useState(null);
+  const [photo, setPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,6 +17,7 @@ export default function TranscriptToolPage() {
   const [copiedId, setCopiedId] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const fileInputRef = useRef(null);
+  const photoInputRef = useRef(null);
 
   // Load history from localStorage
   useEffect(() => {
@@ -83,6 +86,31 @@ export default function TranscriptToolPage() {
     setFile(selectedFile);
   };
 
+  const handlePhotoChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedPhoto = e.target.files[0];
+      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+      if (!validTypes.includes(selectedPhoto.type) && !selectedPhoto.name.match(/\.(jpg|jpeg|png|webp)$/i)) {
+        setError("Please upload an image file (.jpg, .jpeg, .png, .webp) for the student photo.");
+        return;
+      }
+      setPhoto(selectedPhoto);
+      const previewUrl = URL.createObjectURL(selectedPhoto);
+      setPhotoPreview(previewUrl);
+    }
+  };
+
+  const removePhoto = () => {
+    setPhoto(null);
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview);
+      setPhotoPreview(null);
+    }
+    if (photoInputRef.current) {
+      photoInputRef.current.value = "";
+    }
+  };
+
   const handleProcess = async (e) => {
     e.preventDefault();
     if (!file) {
@@ -97,8 +125,11 @@ export default function TranscriptToolPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      if (photo) {
+        formData.append("photo", photo);
+      }
 
-      // Call the API endpoint requesting JSON format with base64 for reliable instant download & display
+      // Call API requesting JSON format with base64 for download
       const response = await fetch("/api/process-transcript?format=json", {
         method: "POST",
         body: formData,
@@ -110,7 +141,6 @@ export default function TranscriptToolPage() {
         throw new Error(data.error || "Failed to process transcript.");
       }
 
-      // Automatically trigger download of the modified DOCX file
       let downloadUrl = "";
       if (data.modifiedBlobUrl) {
         downloadUrl = data.modifiedBlobUrl;
@@ -134,6 +164,7 @@ export default function TranscriptToolPage() {
         filename: data.filename || `modified-${file.name}`,
         downloadUrl: downloadUrl,
         modifiedBlobUrl: data.modifiedBlobUrl,
+        photoBlobUrl: data.photoBlobUrl,
         timestamp: new Date().toISOString(),
       };
 
@@ -167,80 +198,150 @@ export default function TranscriptToolPage() {
         <div className="text-center max-w-3xl mx-auto mb-10">
           <h1 className="text-3xl sm:text-5xl font-extrabold mb-4">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-secondary-600">
-              Transcript QR Code
+              Transcript QR & Photo
             </span>{" "}
-            Replacer
+            Tool
           </h1>
           <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
-            Upload your school transcript DOCX file. The tool will automatically find the embedded
-            QR code, replace it with a new QR pointing to your personal verification URL (
-            <code className="text-primary-400">/t/[unique-id]</code>), and return the updated file ready for download.
+            Upload your school transcript DOCX file. The tool replaces the embedded QR code with a
+            unique verification link (<code className="text-primary-400">/t/[id]</code>) and can
+            optionally insert the student photo into the designated photo box.
           </p>
         </div>
 
         {/* Upload Container */}
         <div className="max-w-2xl mx-auto">
-          <div className="bg-[#181818] border border-[#33353F] rounded-2xl p-6 sm:p-8 shadow-xl">
-            {/* Drag & Drop Area */}
-            <div
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-8 sm:p-12 text-center cursor-pointer transition flex flex-col items-center justify-center ${
-                dragActive
-                  ? "border-primary-500 bg-purple-500/10"
-                  : "border-gray-700 hover:border-gray-500 bg-[#121212]/50"
-              }`}
-            >
+          <div className="bg-[#181818] border border-[#33353F] rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+            {/* 1. DOCX Drag & Drop Area */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-300 mb-2">
+                1. Upload Transcript DOCX <span className="text-red-400">*</span>
+              </label>
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-6 sm:p-8 text-center cursor-pointer transition flex flex-col items-center justify-center ${
+                  dragActive
+                    ? "border-primary-500 bg-purple-500/10"
+                    : "border-gray-700 hover:border-gray-500 bg-[#121212]/50"
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+
+                <div className="w-12 h-12 mb-3 rounded-full bg-purple-900/30 border border-purple-600/30 flex items-center justify-center text-primary-400">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                </div>
+
+                {file ? (
+                  <div>
+                    <p className="text-white font-medium text-base mb-1">{file.name}</p>
+                    <p className="text-gray-400 text-xs">
+                      {(file.size / (1024 * 1024)).toFixed(2)} MB • Ready to process
+                    </p>
+                    <span className="inline-block mt-2 text-xs text-primary-400 underline">
+                      Click to change DOCX
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-white font-medium text-sm mb-1">
+                      Drag and drop your <span className="text-primary-400 font-semibold">.docx</span> file here
+                    </p>
+                    <p className="text-gray-500 text-xs">or click to browse your computer</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 2. Optional Student Photo Input */}
+            <div className="pt-2 border-t border-gray-800">
+              <label className="block text-sm font-semibold text-gray-300 mb-2">
+                2. Student Photo <span className="text-gray-500 font-normal">(optional)</span>
+              </label>
+
               <input
-                ref={fileInputRef}
+                ref={photoInputRef}
                 type="file"
-                accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                onChange={handleFileChange}
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handlePhotoChange}
                 className="hidden"
               />
 
-              <div className="w-16 h-16 mb-4 rounded-full bg-purple-900/30 border border-purple-600/30 flex items-center justify-center text-primary-400">
-                <svg
-                  className="w-8 h-8"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              {photoPreview ? (
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-[#121212]/70 border border-gray-800">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoPreview}
+                    alt="Student Preview"
+                    className="w-16 h-20 object-cover rounded-lg border border-purple-500/40 shadow"
                   />
-                </svg>
-              </div>
-
-              {file ? (
-                <div>
-                  <p className="text-white font-medium text-lg mb-1">{file.name}</p>
-                  <p className="text-gray-400 text-xs">
-                    {(file.size / (1024 * 1024)).toFixed(2)} MB • Ready to process
-                  </p>
-                  <span className="inline-block mt-3 text-xs text-primary-400 underline">
-                    Click to change file
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{photo.name}</p>
+                    <p className="text-xs text-green-400 mt-0.5">Photo ready to insert into square</p>
+                    <div className="flex gap-3 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => photoInputRef.current?.click()}
+                        className="text-xs text-primary-400 hover:text-primary-300 underline"
+                      >
+                        Change Photo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={removePhoto}
+                        className="text-xs text-red-400 hover:text-red-300 underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div>
-                  <p className="text-white font-medium mb-1">
-                    Drag and drop your <span className="text-primary-400">.docx</span> file here
-                  </p>
-                  <p className="text-gray-500 text-xs">or click to browse your computer</p>
+                <div
+                  onClick={() => photoInputRef.current?.click()}
+                  className="p-4 border border-dashed border-gray-700 hover:border-gray-500 rounded-xl bg-[#121212]/30 flex items-center gap-3 cursor-pointer transition"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-pink-950/30 border border-pink-700/30 flex items-center justify-center text-pink-400 flex-shrink-0">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-300">
+                      Upload student photo <span className="text-xs text-gray-500 font-normal">(.jpg, .png, .webp)</span>
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Will be placed inside the right-hand square box
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="mt-4 p-4 rounded-xl bg-red-900/30 border border-red-700/50 text-red-300 text-sm flex items-center gap-3">
+              <div className="p-4 rounded-xl bg-red-900/30 border border-red-700/50 text-red-300 text-sm flex items-center gap-3">
                 <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
@@ -256,7 +357,7 @@ export default function TranscriptToolPage() {
             <button
               onClick={handleProcess}
               disabled={!file || loading}
-              className={`w-full mt-6 py-3.5 px-6 rounded-xl font-semibold text-white transition flex items-center justify-center gap-2 ${
+              className={`w-full py-3.5 px-6 rounded-xl font-semibold text-white transition flex items-center justify-center gap-2 ${
                 !file || loading
                   ? "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700"
                   : "bg-gradient-to-r from-primary-500 to-secondary-500 hover:opacity-90 shadow-lg shadow-purple-500/20"
@@ -284,11 +385,11 @@ export default function TranscriptToolPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  <span>Processing & Replacing QR Code...</span>
+                  <span>Processing & Assembling Transcript...</span>
                 </>
               ) : (
                 <>
-                  <span>Process Transcript & Replace QR</span>
+                  <span>Process Transcript & Update QR</span>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -303,8 +404,8 @@ export default function TranscriptToolPage() {
 
             {/* Result Display */}
             {result && (
-              <div className="mt-8 pt-6 border-t border-gray-800 animate-fadeIn">
-                <div className="p-4 rounded-xl bg-green-950/40 border border-green-700/50 mb-6 flex items-start gap-3">
+              <div className="pt-6 border-t border-gray-800 animate-fadeIn space-y-4">
+                <div className="p-4 rounded-xl bg-green-950/40 border border-green-700/50 flex items-start gap-3">
                   <svg
                     className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5"
                     fill="none"
@@ -320,15 +421,15 @@ export default function TranscriptToolPage() {
                   </svg>
                   <div>
                     <h3 className="font-semibold text-green-300 text-sm">
-                      Success! QR Code Replaced
+                      Success! Transcript Updated
                     </h3>
                     <p className="text-green-400/80 text-xs mt-0.5">
-                      Your updated transcript has been generated and download started.
+                      QR code replaced {photo ? "and photo inserted " : ""}successfully.
                     </p>
                   </div>
                 </div>
 
-                <div className="space-y-3 text-xs sm:text-sm">
+                <div className="space-y-2 text-xs sm:text-sm">
                   <div className="bg-[#121212] p-3 rounded-lg border border-gray-800 flex items-center justify-between">
                     <span className="text-gray-400">Generated ID:</span>
                     <div className="flex items-center gap-2">
@@ -360,26 +461,17 @@ export default function TranscriptToolPage() {
                       </button>
                     </div>
                   </div>
-
-                  {result.originalQrData && result.originalQrData !== "N/A" && (
-                    <div className="bg-[#121212] p-3 rounded-lg border border-gray-800 flex flex-col gap-1">
-                      <span className="text-gray-400">Detected School Original QR:</span>
-                      <span className="font-mono text-gray-300 text-xs break-all">
-                        {result.originalQrData}
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Actions */}
-                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <div className="pt-2 flex flex-col sm:flex-row gap-3">
                   {result.downloadUrl && (
                     <a
                       href={result.downloadUrl}
                       download={result.filename}
                       className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-center font-semibold text-white text-sm shadow-md hover:opacity-90 transition"
                     >
-                      Download Again (.docx)
+                      Download Modified DOCX (.docx)
                     </a>
                   )}
                   <Link
@@ -387,7 +479,7 @@ export default function TranscriptToolPage() {
                     target="_blank"
                     className="flex-1 py-3 px-4 rounded-xl bg-[#222430] hover:bg-[#2b2e3d] text-center font-medium text-gray-200 text-sm border border-[#3b3e4f] transition"
                   >
-                    Open Live Verification Page ↗
+                    View Live Page ↗
                   </Link>
                 </div>
               </div>

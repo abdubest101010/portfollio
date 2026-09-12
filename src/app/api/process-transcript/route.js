@@ -8,6 +8,7 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
+    const photo = formData.get("photo");
 
     if (!file || typeof file === "string") {
       return NextResponse.json(
@@ -27,8 +28,21 @@ export async function POST(request) {
     const arrayBuffer = await file.arrayBuffer();
     const fileBuffer = Buffer.from(arrayBuffer);
 
-    // Process the transcript
-    const result = await processTranscriptDocx(fileBuffer, filename);
+    let photoBuffer = null;
+    let photoFilename = "photo.jpg";
+    if (photo && typeof photo !== "string" && photo.size > 0) {
+      const photoArrayBuffer = await photo.arrayBuffer();
+      photoBuffer = Buffer.from(photoArrayBuffer);
+      photoFilename = photo.name || "photo.jpg";
+    }
+
+    // Process the transcript with optional photo
+    const result = await processTranscriptDocx(
+      fileBuffer,
+      filename,
+      photoBuffer,
+      photoFilename
+    );
 
     const format = request.nextUrl.searchParams.get("format");
     const acceptHeader = request.headers.get("accept") || "";
@@ -43,6 +57,7 @@ export async function POST(request) {
         filename: `modified-${filename}`,
         modifiedBlobUrl: result.metadata.modifiedBlobUrl,
         originalBlobUrl: result.metadata.originalBlobUrl,
+        photoBlobUrl: result.metadata.photoBlobUrl,
         metadataBlobUrl: result.metadata.metadataBlobUrl,
         modifiedDocxBase64: result.modifiedDocxBuffer.toString("base64"),
       });
@@ -60,8 +75,9 @@ export async function POST(request) {
         "x-new-qr-url": encodeURIComponent(result.newQrUrl),
         "x-original-qr-data": encodeURIComponent(result.originalQrData || "N/A"),
         "x-modified-blob-url": encodeURIComponent(result.metadata.modifiedBlobUrl || ""),
+        "x-photo-blob-url": encodeURIComponent(result.metadata.photoBlobUrl || ""),
         "Access-Control-Expose-Headers":
-          "x-transcript-id, x-new-qr-url, x-original-qr-data, x-modified-blob-url, Content-Disposition",
+          "x-transcript-id, x-new-qr-url, x-original-qr-data, x-modified-blob-url, x-photo-blob-url, Content-Disposition",
       },
     });
   } catch (error) {
