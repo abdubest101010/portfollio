@@ -53,9 +53,9 @@ body {
 section.docx {
   background: white !important;
   color: black !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6) !important;
-  margin-bottom: 24px !important;
-  border-radius: 4px !important;
+  box-shadow: none !important;
+  margin-bottom: 0 !important;
+  border-radius: 0 !important;
   box-sizing: border-box !important;
 }
 
@@ -77,26 +77,23 @@ section.docx {
   line-height: 1.6;
 }
 
-/* Unveiling Animation (Top to Down reveal) */
+/* Smooth Top-to-Bottom Unveiling Animation */
 @keyframes unveil {
   0% {
     opacity: 0;
-    transform: translateY(-24px);
-    clip-path: inset(0 0 100% 0);
-  }
-  50% {
-    opacity: 0.85;
-    clip-path: inset(0 0 15% 0);
+    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+    transform: translateY(-20px);
   }
   100% {
     opacity: 1;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
     transform: translateY(0);
-    clip-path: inset(0 0 0 0);
   }
 }
 
 .animate-unveil {
-  animation: unveil 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: unveil 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: clip-path, transform, opacity;
 }
 
 

@@ -6,7 +6,7 @@ export default function GibsonTranscriptRenderer({ data }) {
   if (!data) return null;
 
   return (
-    <div className="w-full max-w-[980px] bg-white text-black p-6 sm:p-10 shadow-2xl rounded-sm border border-gray-300 font-serif text-sm mx-auto leading-normal">
+    <div className="w-full max-w-[980px] bg-white text-black p-4 sm:p-8 font-serif text-sm mx-auto leading-normal">
       {/* 1. Header 3-Column Section */}
       <div className="grid grid-cols-12 gap-2 border-b border-gray-400 pb-3 mb-3 items-center">
         {/* Left: QR Code & Short Name */}
