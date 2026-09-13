@@ -156,15 +156,28 @@ export async function processTranscriptDocx(
           docXml = docXml.replace('<w:document ', '<w:document xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ');
         }
 
-        const photoDrawingXml = `<w:p w:rsidR="003576BC" w:rsidRDefault="00F428F1"><w:pPr><w:jc w:val="center"/><w:spacing w:after="40" w:before="0"/></w:pPr><w:r><w:rPr><w:noProof/></w:rPr><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="1069354" cy="1283225"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="99" name="Student Photo"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="99" name="student_photo.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rIdPhoto" cstate="print"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1069354" cy="1283225"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+        const photoDrawingXml = `<w:p w:rsidR="003576BC" w:rsidRDefault="00F428F1"><w:pPr><w:jc w:val="center"/><w:spacing w:after="0" w:before="0"/></w:pPr><w:r><w:rPr><w:noProof/></w:rPr><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="1069354" cy="1283225"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="99" name="Student Photo"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="99" name="student_photo.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rIdPhoto" cstate="print"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1069354" cy="1283225"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
 
-        // Insert before "Note: The photo is" or inside the right-hand cell
-        const noteIdx = docXml.indexOf("Note: The photo is");
-        if (noteIdx !== -1) {
-          const pStart = docXml.lastIndexOf("<w:p", noteIdx);
-          if (pStart !== -1) {
-            docXml = docXml.slice(0, pStart) + photoDrawingXml + docXml.slice(pStart);
+        // Target the bordered photo box cell in Table 0
+        const boxBorderMarker = 'w:sz="7" w:space="0" w:color="000000"';
+        const boxIdx = docXml.indexOf(boxBorderMarker);
+        if (boxIdx !== -1) {
+          const afterPr = docXml.indexOf('</w:tcPr>', boxIdx);
+          if (afterPr !== -1) {
+            const pEnd = docXml.indexOf('</w:p>', afterPr) + 6;
+            // Replace the empty paragraph inside the bordered photo cell with our photo drawing paragraph
+            docXml = docXml.substring(0, afterPr + 9) + photoDrawingXml + docXml.substring(pEnd);
             zip.file(docPath, docXml);
+          }
+        } else {
+          // Fallback: Insert before "Note: The photo is"
+          const noteIdx = docXml.indexOf("Note: The photo is");
+          if (noteIdx !== -1) {
+            const pStart = docXml.lastIndexOf("<w:p", noteIdx);
+            if (pStart !== -1) {
+              docXml = docXml.slice(0, pStart) + photoDrawingXml + docXml.slice(pStart);
+              zip.file(docPath, docXml);
+            }
           }
         }
       }
